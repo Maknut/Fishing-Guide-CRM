@@ -1,0 +1,281 @@
+// Guidebook — data model
+// Multi-tenant: every tenant-owned row carries guideId. All queries MUST filter by guideId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Tenant ───────────────────────────
+
+model Guide {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  businessName  String?
+  timezone      String   @default("America/New_York")
+  // Twilio
+  twilioNumber  String?  @unique // E.164, provisioned per guide
+  // Email channel (per-guide connected inbox)
+  emailProvider EmailProvider?
+  emailAddress  String?
+  // Defaults
+  defaultTideStationId String? // NOAA station, overridable per meeting spot
+
+  clients       Client[]
+  tripTypes     TripType[]
+  bookings      Booking[]
+  conversations Conversation[]
+  blockedDays   BlockedDay[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EmailProvider {
+  GMAIL
+  OUTLOOK
+}
+
+// ─────────────────────────── CRM ───────────────────────────
+
+model Client {
+  id      String  @id @default(cuid())
+  guideId String
+  guide   Guide   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  name    String
+  phone   String? // E.164
+  email   String?
+  notes   String? // "gets seasick in chop, brings own 7wt"
+  tags    String[] // ["repeat", "inshore", "prefers artificials"]
+
+  conversation Conversation?
+  bookings     Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guideId])
+  @@unique([guideId, phone])
+}
+
+// ─────────────────────────── Messaging ───────────────────────────
+
+// One thread per client, channel-agnostic.
+model Conversation {
+  id       String @id @default(cuid())
+  guideId  String
+  guide    Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  clientId String @unique
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  messages      Message[]
+  lastMessageAt DateTime?
+  unreadCount   Int       @default(0)
+
+  @@index([guideId, lastMessageAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  channel   Channel
+  direction Direction
+  body      String
+  // Channel-specific metadata
+  externalId String?  // Twilio SID / email Message-ID (idempotency on webhooks)
+  subject    String?  // email only
+  status     MsgStatus @default(DELIVERED)
+
+  // "Pin to trip" — surfaces on booking + client trip page
+  pinnedToBookingId String?
+  pinnedToBooking   Booking? @relation(fields: [pinnedToBookingId], references: [id], onDelete: SetNull)
+
+  sentAt DateTime @default(now())
+
+  @@index([conversationId, sentAt])
+  @@index([externalId])
+}
+
+enum Channel {
+  SMS
+  EMAIL
+  // INSTAGRAM — phase 2
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum MsgStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+// ─────────────────────────── Trips & booking ───────────────────────────
+
+model TripType {
+  id      String @id @default(cuid())
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  name          String  // "Half-Day Inshore AM"
+  slot          Slot    // AM, PM, or FULL — drives calendar half-day logic
+  durationHours Float
+  maxAnglers    Int     @default(2)
+  priceCents    Int?    // unused in v1; reserved for payments phase
+  meetingSpot   String
+  meetingLat    Float?
+  meetingLng    Float?
+  tideStationId String? // overrides guide default
+  description   String?
+
+  // Default client-facing content, copied into TripPage sections at booking creation
+  gearBring    String[] // "Sunscreen & hat", "Polarized glasses"
+  gearNotBring String[] // "Bananas", "Hard-sole boots"
+  faqs         Json     @default("[]") // [{q, a}]
+
+  bookings Booking[]
+  archived Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guideId])
+}
+
+enum Slot {
+  AM
+  PM
+  FULL
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  guideId    String
+  guide      Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  tripTypeId String
+  tripType   TripType @relation(fields: [tripTypeId], references: [id])
+
+  date      DateTime // trip date (guide's tz)
+  slot      Slot     // copied from tripType, editable (a FULL type can't split, but AM type could move to PM)
+  startTime String   // "06:00" — display time
+  anglers   Int      @default(1)
+  status    BookingStatus @default(INQUIRY)
+  notes     String?  // internal guide notes
+
+  tripPage       TripPage?
+  pinnedMessages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One booking per guide/date/slot. FULL conflicts with AM+PM — enforced in service layer.
+  @@unique([guideId, date, slot])
+  @@index([guideId, date])
+  @@index([guideId, status])
+}
+
+enum BookingStatus {
+  INQUIRY
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model BlockedDay {
+  id      String   @id @default(cuid())
+  guideId String
+  guide   Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  date    DateTime
+  slot    Slot     @default(FULL)
+  reason  String?  // "boat maintenance"
+
+  @@unique([guideId, date, slot])
+}
+
+// ─────────────────────────── Client trip page ───────────────────────────
+
+model TripPage {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  slug String @unique // public URL token, unguessable (nanoid)
+
+  // Flexible, guide-editable ordered sections (seeded from TripType at creation):
+  // [{ id, kind: "meet"|"bring"|"not_bring"|"faq"|"custom", title, body|items|qas, order }]
+  sections Json @default("[]")
+
+  // Weather & tides cache
+  tideStationId  String?
+  tidePredictions Json?    // [{ type: "H"|"L", time, height }] — fetch once, astronomical
+  weatherStatus  WeatherStatus @default(PENDING)
+  weatherSnapshot Json?    // { tempLow, tempHigh, windDir, windMph, precipPct, shortForecast, wearRec }
+  weatherFetchedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum WeatherStatus {
+  PENDING   // trip > 7 days out; "forecast available closer to trip date"
+  AVAILABLE
+  STALE     // fetch failing; show last snapshot with timestamp
+}
+
+// ─────────────────────────── Auth.js tables ───────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}

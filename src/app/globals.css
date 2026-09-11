@@ -1,0 +1,89 @@
+/* Nature Club — gum green on warm cream, field-guide typography */
+:root {
+  --bg: #f5f0e3;
+  --card: #fcf9f0;
+  --line: #d9cfb8;
+  --ink: #26321f;
+  --dim: #82806b;
+  --accent: #33582f;
+  --warn: #d97b2f;
+  --block: #aba58c;
+  --hero-ink: #f5f0e3;
+  --danger: #a33c2e;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--ink); font-family: var(--font-body, system-ui), sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+h1, h2, .display { font-family: var(--font-display, Georgia), serif; }
+
+/* App shell */
+.shell { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
+.shell-header { padding: 14px 16px 10px; border-bottom: 2px solid var(--accent); background: var(--card); position: sticky; top: 0; z-index: 10; }
+.shell-header h1 { font-size: 20px; font-weight: 800; }
+.shell-main { flex: 1; padding: 14px 14px 90px; }
+.tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px;
+  display: flex; border-top: 1px solid var(--line); background: var(--card); z-index: 10; }
+.tabbar a { flex: 1; text-align: center; padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.5px; }
+.tabbar a.active { color: var(--accent); }
+.tabbar a span { display: block; font-size: 20px; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: block; color: var(--ink); }
+.card h2, .eyebrow-label { font-family: var(--font-body, system-ui), sans-serif; font-size: 11px; font-weight: 700; color: var(--accent);
+  letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
+.card .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dim { color: var(--dim); font-size: 13px; line-height: 1.55; }
+.title-sm { font-size: 14px; font-weight: 700; }
+
+/* Pills & buttons */
+.pill { font-size: 11px; font-weight: 700; color: #fff; border-radius: 20px; padding: 2px 9px; white-space: nowrap; }
+.pill.confirmed, .pill.completed { background: var(--accent); }
+.pill.inquiry { background: var(--warn); }
+.pill.cancelled { background: var(--block); }
+.btn { display: inline-block; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 9px; padding: 9px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn.primary { background: var(--accent); color: var(--hero-ink); border: none; }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+
+/* Inbox thread */
+.msg { max-width: 82%; padding: 9px 11px; border-radius: 11px; font-size: 14px; line-height: 1.4; margin-bottom: 2px; }
+.msg.in { background: var(--card); border: 1px solid var(--line); align-self: flex-start; }
+.msg.out { background: var(--accent); color: var(--hero-ink); align-self: flex-end; }
+.msg.pinned { outline: 2px solid var(--warn); }
+.msg-meta { font-size: 10px; color: var(--dim); margin-bottom: 10px; }
+.thread-scroll { display: flex; flex-direction: column; }
+
+/* Calendar */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-dow { font-size: 10px; color: var(--dim); font-weight: 700; }
+.cal-day { padding: 2px; border-radius: 8px; color: inherit; }
+.cal-day .num { font-size: 12px; font-weight: 600; }
+.cal-day .halves { display: flex; gap: 1px; height: 7px; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+.cal-day .half { flex: 1; background: var(--line); }
+.cal-day .half.confirmed { background: var(--accent); }
+.cal-day .half.inquiry { background: var(--warn); }
+.cal-day .half.blocked { background: var(--block); }
+.cal-day.today .num { color: var(--accent); text-decoration: underline; }
+
+/* Public trip page */
+.trip { max-width: 480px; margin: 0 auto; padding: 14px 14px 40px; }
+.trip .hero { background: var(--accent); color: var(--hero-ink); border-radius: 14px; padding: 18px 16px; margin-bottom: 12px;
+  outline: 1.5px dashed color-mix(in srgb, var(--hero-ink) 35%, transparent); outline-offset: -6px; }
+.trip .hero .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.85; }
+.trip .hero h1 { font-size: 26px; margin: 2px 0; }
+.trip .card h2 { margin-bottom: 8px; }
+.trip ul { list-style: none; padding: 0; }
+.trip li { font-size: 14px; padding: 2px 0; }
+.trip details { padding: 4px 0; font-size: 14px; }
+.trip summary { cursor: pointer; font-weight: 600; }
+.trip .wear { background: var(--bg); border-radius: 9px; padding: 9px; font-size: 13px; margin-top: 8px; }
+.trip .cta { display: block; text-align: center; background: var(--accent); color: var(--hero-ink);
+  border-radius: 12px; padding: 14px; font-weight: 800; font-size: 15px; }
+
+/* Forms */
+input, select, textarea { font-family: inherit; font-size: 14px; color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; width: 100%; }
+label { font-size: 12px; font-weight: 700; color: var(--dim); display: block; margin: 10px 0 4px; }
