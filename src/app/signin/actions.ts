@@ -1,5 +1,5 @@
 "use server";
-import { emailConfigured, signIn } from "@/lib/auth";
+import { emailConfigured, emailLooksLikePlaceholder, signIn } from "@/lib/auth";
 
 export type SignInState = { error: string | null };
 
@@ -11,6 +11,10 @@ export async function sendSignInLink(_prev: SignInState, formData: FormData): Pr
     return { error: "Sign-in email isn't set up on this site yet. Add EMAIL_SERVER and EMAIL_FROM to the site's environment variables, then redeploy." };
   }
 
+  if (emailLooksLikePlaceholder()) {
+    return { error: "The EMAIL_SERVER setting still contains example text instead of a real mail key. Replace it with your Resend API key (it starts with re_), then redeploy." };
+  }
+
   try {
     await signIn("nodemailer", { email, redirectTo: "/dashboard" });
   } catch (e) {
@@ -18,6 +22,16 @@ export async function sendSignInLink(_prev: SignInState, formData: FormData): Pr
     const digest = (e as { digest?: unknown })?.digest;
     if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) throw e;
     console.error("[signin] could not send link", e);
+    const detail = e instanceof Error ? `${e.name} ${e.message}` : "";
+    if (/EAUTH|Invalid login|authentication|535|API key/i.test(detail)) {
+      return { error: "The mail service rejected the site's key. Check the Resend API key in EMAIL_SERVER, then redeploy." };
+    }
+    if (/ETIMEDOUT|ECONNREFUSED|ENOTFOUND|ESOCKET|timeout|Greeting/i.test(detail)) {
+      return { error: "The site couldn't reach its mail service. Check the host and port in EMAIL_SERVER." };
+    }
+    if (/not authorized|own email|verify a domain|testing emails|403|450|550/i.test(detail)) {
+      return { error: "The mail service refused to send to that address. Until a sending domain is verified in Resend, links can only go to the email you signed up to Resend with." };
+    }
     return { error: "We couldn't send the sign-in email. Check the address and try again in a minute." };
   }
   return { error: null };

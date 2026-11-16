@@ -19,13 +19,42 @@ export function emailConfigured(): boolean {
   return Boolean(process.env.EMAIL_SERVER && process.env.EMAIL_FROM);
 }
 
+/** True when EMAIL_SERVER still holds example text from the setup guide instead of a real key. */
+export function emailLooksLikePlaceholder(): boolean {
+  return /YOUR[_-]|PASSWORD|<|>/i.test(process.env.EMAIL_SERVER ?? "");
+}
+
+/**
+ * Turn EMAIL_SERVER ("smtp://user:pass@host:port") into explicit mail settings.
+ * Two things the bare URL gets wrong on its own:
+ *  - port 465 needs TLS from the first byte; with "smtp://" the mail library would wait
+ *    forever for a plain-text greeting that never comes.
+ *  - no timeouts, so a bad host or port hangs until the hosting platform kills the request.
+ */
+export function mailServer(raw = process.env.EMAIL_SERVER ?? "") {
+  const timeouts = { connectionTimeout: 6000, greetingTimeout: 6000, socketTimeout: 8000 };
+  try {
+    const u = new URL(raw);
+    const port = Number(u.port) || (u.protocol === "smtps:" ? 465 : 587);
+    return {
+      host: u.hostname,
+      port,
+      secure: u.protocol === "smtps:" || port === 465,
+      auth: u.username ? { user: decodeURIComponent(u.username), pass: decodeURIComponent(u.password) } : undefined,
+      ...timeouts,
+    };
+  } catch {
+    return raw; // not a URL; let the mail library report what's wrong with it
+  }
+}
+
 // The config is a function so it is read per request, not when the file loads. A build
 // (or a preview deploy) without email settings then still succeeds; sign-in simply
 // reports that email isn't set up instead of crashing the whole site.
 export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   adapter: PrismaAdapter(prisma),
   providers: emailConfigured()
-    ? [EmailProvider({ server: process.env.EMAIL_SERVER, from: process.env.EMAIL_FROM })]
+    ? [EmailProvider({ server: mailServer(), from: process.env.EMAIL_FROM })]
     : [],
   pages: {
     signIn: "/signin",

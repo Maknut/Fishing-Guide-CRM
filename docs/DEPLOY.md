@@ -72,7 +72,7 @@ Refresh the GitHub page — you should see all your files. ✅
 | `DATABASE_URL` | Your Supabase connection string — **but see the note below** |
 | `AUTH_SECRET` | Any long random string (e.g. mash the keyboard for 40 characters) |
 | `AUTH_TRUST_HOST` | `true` |
-| `EMAIL_SERVER` | `smtp://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465` |
+| `EMAIL_SERVER` | `smtps://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465` (swap in your real key, which starts with `re_`) |
 | `EMAIL_FROM` | `Guidebook <onboarding@resend.dev>` |
 | `NWS_USER_AGENT` | `guidebook (elied0327@gmail.com)` |
 | `CRON_SECRET` | Another long random string |

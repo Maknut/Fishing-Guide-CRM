@@ -15,7 +15,7 @@ function runs the daily tide and forecast refresh.
 | `DATABASE_URL` | Supabase **Transaction pooler** URL (port 6543) with `?pgbouncer=true` on the end |
 | `AUTH_SECRET` | Any long random string |
 | `AUTH_TRUST_HOST` | `true` |
-| `EMAIL_SERVER` | `smtp://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465` |
+| `EMAIL_SERVER` | `smtps://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465` (swap in your real key, which starts with `re_`) |
 | `EMAIL_FROM` | `Driftline <onboarding@resend.dev>` |
 | `NWS_USER_AGENT` | `driftline (your email address)` |
 | `CRON_SECRET` | Another long random string |
