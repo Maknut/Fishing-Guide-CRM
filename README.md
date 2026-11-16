@@ -36,6 +36,12 @@ npm run dev
 - **Dates:** booking dates are calendar days stored at UTC midnight; "today" always comes from the guide's time zone (`src/lib/dates.ts`).
 - **API routes** share `route()` in `src/lib/api.ts`: 401 when signed out, plain-language JSON errors.
 
+## Letting people try it
+
+Set `DEMO_ENABLED=true` and the sign-in page gains a "Try the demo" button. Each visitor gets
+their own account filled with sample data (`src/lib/demo.ts`): no email, texting off, removed
+by the daily job after 7 days. Leave it unset on a production site.
+
 ## Docs
 
 - `HOW-TO-RUN-LOCALLY.md` — local setup, non-dev

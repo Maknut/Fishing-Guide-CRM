@@ -955,6 +955,21 @@ a.cal-cell:hover { background: color-mix(in srgb, var(--sunk) 55%, transparent);
   .auth { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
   .auth-brand { padding: var(--s-10) var(--s-12) var(--s-12); }
 }
+.demo-form { margin-top: var(--s-6); }
+.demo-form .fine { margin-top: var(--s-3); }
+.or { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); font-size: var(--t-13); color: var(--ink-3); }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.demo-banner {
+  padding: 10px var(--gutter);
+  background: var(--sunrise-tint); color: var(--sunrise-ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--sunrise) 45%, var(--line));
+  font-size: var(--t-13); line-height: 1.45;
+}
+@media (min-width: 1024px) {
+  /* One fixed-height line on desktop so the full-height inbox can subtract it exactly. */
+  .demo-banner { height: 40px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .demo-banner ~ .inbox, .demo-banner ~ .inbox .thread, .demo-banner ~ .inbox .inbox-pane-empty { height: calc(100dvh - 40px); }
+}
 .mail-icon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--green-tint); color: var(--green-ink); margin-bottom: var(--s-5); }
 
 /* ---------- Public trip page ---------- */

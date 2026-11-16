@@ -20,6 +20,7 @@ function runs the daily tide and forecast refresh.
 | `NWS_USER_AGENT` | `driftline (your email address)` |
 | `CRON_SECRET` | Another long random string |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WEBHOOK_URL` | Add when Twilio is set up |
+| `DEMO_ENABLED` | Optional. `true` adds a "Try the demo" button so testers can get in without email |
 
 5. Click **Deploy**. Every push to `main` redeploys automatically after that.
 

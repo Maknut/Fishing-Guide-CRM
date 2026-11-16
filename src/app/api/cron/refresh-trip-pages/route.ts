@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshUpcomingTripPages } from "@/lib/tripPageRefresh";
+import { cleanupDemoAccounts } from "@/lib/demo";
 
-// Vercel Cron (vercel.json) hits this daily. Protect with CRON_SECRET.
+// Daily job (Vercel Cron via vercel.json, or the Netlify scheduled function). Protected by CRON_SECRET.
 export async function GET(req: NextRequest) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const results = await refreshUpcomingTripPages();
-  return NextResponse.json(results);
+  const demoAccountsRemoved = await cleanupDemoAccounts().catch(e => {
+    console.error("[demo] cleanup failed", e);
+    return 0;
+  });
+  return NextResponse.json({ ...results, demoAccountsRemoved });
 }

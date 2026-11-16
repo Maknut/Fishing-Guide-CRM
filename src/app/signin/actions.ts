@@ -1,4 +1,7 @@
 "use server";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { createDemoAccount, DemoUnavailable } from "@/lib/demo";
 import { emailConfigured, emailLooksLikePlaceholder, signIn } from "@/lib/auth";
 
 export type SignInState = { error: string | null };
@@ -35,4 +38,24 @@ export async function sendSignInLink(_prev: SignInState, formData: FormData): Pr
     return { error: "We couldn't send the sign-in email. Check the address and try again in a minute." };
   }
   return { error: null };
+}
+
+/** "Try the demo": make a private sample account and sign the visitor straight in. */
+export async function startDemo(_prev: SignInState, _formData: FormData): Promise<SignInState> {
+  let session: { sessionToken: string; expires: Date };
+  try {
+    session = await createDemoAccount();
+  } catch (e) {
+    if (e instanceof DemoUnavailable) return { error: e.message };
+    console.error("[demo] could not create account", e);
+    return { error: "The demo couldn't start. Try again in a moment." };
+  }
+
+  // Same cookie Auth.js sets after a magic-link sign-in (database sessions).
+  const h = await headers();
+  const secure = (h.get("x-forwarded-proto") ?? "").split(",")[0].trim() === "https";
+  (await cookies()).set(secure ? "__Secure-authjs.session-token" : "authjs.session-token", session.sessionToken, {
+    httpOnly: true, sameSite: "lax", path: "/", secure, expires: session.expires,
+  });
+  redirect("/dashboard");
 }
