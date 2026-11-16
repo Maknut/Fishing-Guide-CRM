@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Apply migrations to the production database. Never edits schema, never seeds.
-# Usage: DATABASE_URL="<prod url>" ./scripts/migrate-prod.sh
+# Bring the production database in line with prisma/schema.prisma. Never seeds or deletes rows.
+# Usage: DATABASE_URL="<prod direct url, port 5432>" ./scripts/migrate-prod.sh
 set -euo pipefail
 if [ -z "${DATABASE_URL:-}" ]; then echo "Set DATABASE_URL to the production database first."; exit 1; fi
-echo "Applying migrations to: ${DATABASE_URL%%@*}@…"
-npx prisma migrate deploy
+echo "Updating database: ${DATABASE_URL%%@*}@…"
+npx prisma db push
 echo "Done."

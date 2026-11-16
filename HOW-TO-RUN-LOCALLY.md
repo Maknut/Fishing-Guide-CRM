@@ -120,10 +120,10 @@ Save the file.
 Back in Terminal (still in the `guidebook` folder), type:
 
 ```
-npx prisma migrate dev
+npx prisma db push
 ```
 
-It'll ask you to name the migration — just press Enter to accept the default. This creates all the tables in your Supabase database.
+This creates all the tables in your Supabase database. Run it again any time an update changes the database.
 
 ---
 

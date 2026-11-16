@@ -1,7 +1,9 @@
 // Demo data so the app is alive on first run: npx tsx scripts/seed.ts
 // Creates guide demo@guidebook.local — log in with that email (magic link) to see it.
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prisma";
+import { createBooking } from "../src/lib/bookings";
+import { refreshTripPage } from "../src/lib/tripPageRefresh";
+import { addDays, todayInTz } from "../src/lib/dates";
 
 async function main() {
   const guide = await prisma.guide.upsert({
@@ -15,6 +17,12 @@ async function main() {
       defaultTideStationId: "8670870", // Fort Pulaski, GA
     },
   });
+
+  // Safe to run twice: skip if the demo guide already has data.
+  if ((await prisma.client.count({ where: { guideId: guide.id } })) > 0) {
+    console.log("Demo data already exists. Log in as demo@guidebook.local");
+    return;
+  }
 
   const halfAM = await prisma.tripType.create({
     data: {
@@ -47,14 +55,20 @@ async function main() {
   const sarah = await mkClient("Sarah T.", "+15550104455", "sarah@example.com", ["new", "fly"], "First time fly fishing. Wants to target browns.");
   await mkClient("Dave K.", "+15550106677", "dave@example.com", ["repeat", "prefers artificials"]);
 
-  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-  const addDays = (n: number) => { const d = new Date(today); d.setUTCDate(d.getUTCDate() + n); return d; };
+  const today = todayInTz(guide.timezone);
+  const dave = await prisma.client.findFirstOrThrow({ where: { guideId: guide.id, name: "Dave K." } });
 
-  const { createBooking } = await import("../src/lib/bookings");
   const b1 = await createBooking({ guideId: guide.id, clientId: mike.id, tripTypeId: halfAM.id, date: today, startTime: "06:00", anglers: 2 });
   await prisma.booking.update({ where: { id: b1.id }, data: { status: "CONFIRMED" } });
-  await createBooking({ guideId: guide.id, clientId: sarah.id, tripTypeId: fullFly.id, date: addDays(2), startTime: "06:30", notes: "First-timer, vegetarian lunch." });
-  await prisma.blockedDay.create({ data: { guideId: guide.id, date: addDays(4), reason: "boat maintenance" } });
+  const b2 = await createBooking({ guideId: guide.id, clientId: sarah.id, tripTypeId: fullFly.id, date: addDays(today, 2), startTime: "06:30", notes: "First-timer, vegetarian lunch." });
+  const b3 = await createBooking({ guideId: guide.id, clientId: dave.id, tripTypeId: halfAM.id, date: addDays(today, 5), slot: "PM", startTime: "13:00" });
+  await prisma.booking.update({ where: { id: b3.id }, data: { status: "CONFIRMED" } });
+  await prisma.blockedDay.create({ data: { guideId: guide.id, date: addDays(today, 4), reason: "Boat maintenance" } });
+
+  // Pull real tides and forecast for the demo trips (best effort; needs internet).
+  for (const b of [b1, b2, b3]) {
+    if (b.tripPage) await refreshTripPage(b.tripPage.id).catch(() => {});
+  }
 
   // Conversation with pinned message
   const convo = await prisma.conversation.create({ data: { guideId: guide.id, clientId: sarah.id, lastMessageAt: new Date(), unreadCount: 1 } });
@@ -62,8 +76,7 @@ async function main() {
   const reply = await prisma.message.create({ data: { conversationId: convo.id, channel: "SMS", direction: "OUTBOUND", body: "Rods & tackle covered. Bring sunscreen, water, polarized glasses 👍", sentAt: new Date(Date.now() - 7000_000) } });
   await prisma.message.create({ data: { conversationId: convo.id, channel: "SMS", direction: "INBOUND", body: "Can we push to 7am?", sentAt: new Date(Date.now() - 600_000) } });
 
-  const sarahBooking = await prisma.booking.findFirst({ where: { clientId: sarah.id } });
-  if (sarahBooking) await prisma.message.update({ where: { id: reply.id }, data: { pinnedToBookingId: sarahBooking.id } });
+  await prisma.message.update({ where: { id: reply.id }, data: { pinnedToBookingId: b2.id } });
 
   console.log("Seeded. Log in as demo@guidebook.local");
 }

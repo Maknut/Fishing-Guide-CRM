@@ -7,9 +7,12 @@ export async function POST(req: NextRequest) {
   const raw = await req.text();
   const params = Object.fromEntries(new URLSearchParams(raw));
   const signature = req.headers.get("x-twilio-signature") ?? "";
-  const url = process.env.TWILIO_WEBHOOK_URL!; // exact public URL Twilio is configured with
+  const url = process.env.TWILIO_WEBHOOK_URL; // exact public URL Twilio is configured with
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!url || !token) return new NextResponse("Texting is not configured", { status: 503 });
+  if (!params.From || !params.To || !params.MessageSid) return new NextResponse("Bad request", { status: 400 });
 
-  const valid = twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN!, signature, url, params);
+  const valid = twilio.validateRequest(token, signature, url, params);
   if (!valid) return new NextResponse("Invalid signature", { status: 403 });
 
   await handleInboundSms({

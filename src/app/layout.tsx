@@ -1,16 +1,28 @@
-import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import "@fontsource-variable/fraunces/soft.css";
+import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
+import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
-const display = Fraunces({ subsets: ["latin"], variable: "--font-display", weight: ["600", "800"] });
-const body = Inter({ subsets: ["latin"], variable: "--font-body" });
+export const metadata: Metadata = {
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+  description: APP_TAGLINE,
+  applicationName: APP_NAME,
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
 
-export const metadata: Metadata = { title: "Guidebook", description: "CRM, booking & trip pages for fishing guides" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f3eee1",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${display.variable} ${body.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

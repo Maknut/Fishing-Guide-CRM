@@ -12,6 +12,7 @@ export type WeatherSnapshot = {
   precipPct: number | null;
   shortForecast: string | null;
   wearRec: string;
+  wear?: string[]; // one tip per line; older snapshots only have wearRec
 };
 
 async function nws(path: string) {
@@ -33,13 +34,20 @@ export async function getForecastForDate(
   const fc = await nws(forecastUrl);
   const periods: any[] = fc.properties.periods ?? [];
 
-  // NWS gives day + night periods; match both for the trip date.
+  // The daytime period for the trip date carries the high, wind and rain chance.
   const day = periods.find(p => p.startTime.startsWith(tripDateISO) && p.isDaytime);
-  const night = periods.find(p => p.startTime.startsWith(tripDateISO) && !p.isDaytime);
-  if (!day && !night) return null; // out of forecast range (~7 days)
+  // Once the trip day is over (or beyond the ~7 day range) there is nothing useful to store.
+  // Returning null keeps whatever snapshot the page already has.
+  if (!day) return null;
 
-  const tempHigh = day?.temperature ?? null;
-  const tempLow = night?.temperature ?? null;
+  // The low an angler feels at the ramp is the overnight low that ends on the trip morning,
+  // not the following night's. Fall back to that evening's low when the earlier period has
+  // already dropped out of the forecast.
+  const morning = periods.find(p => !p.isDaytime && p.endTime?.startsWith(tripDateISO));
+  const evening = periods.find(p => !p.isDaytime && p.startTime.startsWith(tripDateISO));
+
+  const tempHigh = day.temperature ?? null;
+  const tempLow = morning?.temperature ?? evening?.temperature ?? null;
   const windMph = parseWind(day?.windSpeed);
   const precipPct = day?.probabilityOfPrecipitation?.value ?? null;
 
@@ -52,7 +60,8 @@ export async function getForecastForDate(
     shortForecast: day?.shortForecast ?? null,
     wearRec: "",
   };
-  snapshot.wearRec = buildWearRec(snapshot);
+  snapshot.wear = buildWear(snapshot);
+  snapshot.wearRec = snapshot.wear.join(" ");
   return snapshot;
 }
 
@@ -64,21 +73,28 @@ function parseWind(s?: string): number | null {
 }
 
 // Rules engine: forecast -> "what to wear". Deterministic, no AI, cheap to extend.
-export function buildWearRec(w: WeatherSnapshot): string {
-  const parts: string[] = [];
+// Footwear and gear live in each trip type's own lists, since a skiff and a trout stream
+// call for different things; this only covers what the weather decides.
+export function buildWear(w: Pick<WeatherSnapshot, "tempLow" | "tempHigh" | "windMph" | "precipPct">): string[] {
+  const tips: string[] = [];
   const low = w.tempLow, high = w.tempHigh;
+  const rain = w.precipPct ?? 0, wind = w.windMph ?? 0;
+  const coolest = low ?? high, warmest = high ?? low;
 
-  if (low != null && high != null) {
-    if (low < 45) parts.push(`Cold ${low}° start — insulated jacket, beanie, gloves`);
-    else if (low < 60) parts.push(`Cool ${low}° start warming to ${high}° — dress in layers`);
-    else if (high >= 90) parts.push(`Hot day (${high}°) — lightweight, light-colored sun shirts`);
-    else parts.push(`Mild ${low}–${high}° — light layers`);
+  if (coolest != null && warmest != null) {
+    if (coolest < 45) tips.push(`Cold start around ${coolest}°. Insulated jacket, beanie and gloves.`);
+    else if (coolest < 60 && warmest - coolest >= 12) tips.push(`Cool ${coolest}° start, warming to ${warmest}°. Dress in layers you can peel off.`);
+    else if (coolest < 60) tips.push(`Cool all day, around ${coolest}–${warmest}°. Bring a warm layer.`);
+    else if (warmest >= 90) tips.push(`Hot, up to ${warmest}°. Lightweight, light-colored sun shirt.`);
+    else tips.push(`Mild, ${coolest}–${warmest}°. Light layers.`);
   }
-  if ((w.precipPct ?? 0) >= 40) parts.push("rain jacket a must");
-  else if ((w.precipPct ?? 0) >= 20) parts.push("pack a rain jacket just in case");
-  if ((w.windMph ?? 0) >= 12) parts.push("breezy — hat with a chin strap or buff");
-  if ((high ?? 0) >= 75 && (w.precipPct ?? 0) < 40) parts.push("sun protection a must (long sleeves, SPF)");
-  parts.push("non-marking, deck-safe footwear");
+  if (rain >= 40) tips.push("Rain is likely. Bring a rain jacket.");
+  else if (rain >= 20) tips.push("A shower is possible. Pack a rain jacket just in case.");
+  if (wind >= 12) tips.push("Breezy on the water. Hat with a chin strap, or a buff.");
+  if ((warmest ?? 0) >= 75 && rain < 40) tips.push("Strong sun. Long sleeves and sunscreen.");
+  return tips;
+}
 
-  return parts.join(". ").replace(/\.\s*\./g, ".") + ".";
+export function buildWearRec(w: WeatherSnapshot): string {
+  return buildWear(w).join(" ");
 }

@@ -88,7 +88,7 @@ Refresh the GitHub page — you should see all your files. ✅
 ```
 DATABASE_URL="postgresql://postgres.xxxx:PASSWORD@aws-...supabase.com:5432/postgres" ./scripts/migrate-prod.sh
 ```
-If you set up the local database earlier against the same Supabase project, the tables already exist and this will just say "No pending migrations" — that's fine.
+If you set up the local database earlier against the same Supabase project, the tables already exist and this will say the database is already in sync, which is fine.
 
 **6.** Open your Vercel URL, enter your email, click the login link Resend sends you. You're live.
 

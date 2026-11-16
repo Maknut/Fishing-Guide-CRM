@@ -182,9 +182,10 @@ model Booking {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // One booking per guide/date/slot. FULL conflicts with AM+PM — enforced in service layer.
-  @@unique([guideId, date, slot])
-  @@index([guideId, date])
+  // Slot conflicts (including FULL vs AM/PM) are enforced in lib/bookings.ts inside a
+  // serializable transaction. No unique constraint here: a cancelled booking must not
+  // keep its slot locked forever.
+  @@index([guideId, date, slot])
   @@index([guideId, status])
 }
 

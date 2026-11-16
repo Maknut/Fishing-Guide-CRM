@@ -1,14 +1,21 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { TabBar } from "@/components/TabBar";
+import { prisma } from "@/lib/prisma";
+import { requireGuideRecord } from "@/lib/auth";
+import { Sidebar, TabBar } from "@/components/Nav";
+import { ToastProvider } from "@/components/Toast";
+import { signOutAction } from "./actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session) redirect("/api/auth/signin");
+  const guide = await requireGuideRecord();
+  const unread = await prisma.conversation.aggregate({ where: { guideId: guide.id }, _sum: { unreadCount: true } });
+  const unreadCount = unread._sum.unreadCount ?? 0;
+
   return (
-    <div className="shell">
-      <main className="shell-main">{children}</main>
-      <TabBar />
-    </div>
+    <ToastProvider>
+      <div className="shell">
+        <Sidebar name={guide.name} business={guide.businessName} unread={unreadCount} signOut={signOutAction} />
+        <main className="shell-main" id="main">{children}</main>
+        <TabBar unread={unreadCount} />
+      </div>
+    </ToastProvider>
   );
 }

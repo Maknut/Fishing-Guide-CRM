@@ -1,4 +1,4 @@
-# Guidebook (working name)
+# Driftline
 
 CRM + booking + trip management for fishing guides. Unified SMS/email inbox, half-day/full-day scheduling, and auto-populated client trip pages with NOAA weather, tides, and gear guidance.
 
@@ -11,7 +11,7 @@ Next.js 15 (App Router) · TypeScript · Prisma · PostgreSQL · Auth.js (magic 
 ```bash
 npm install
 cp .env.example .env        # fill in values
-npx prisma migrate dev      # creates DB schema
+npx prisma db push      # creates DB schema
 npm run dev
 ```
 
@@ -22,11 +22,19 @@ npm run dev
 ## Architecture notes
 
 - **Multi-tenancy:** every tenant-owned table carries `guideId`. API routes obtain `guideId` ONLY via `requireGuide()` (session), never from the request. Queries use `findFirst({ where: { id, guideId } })`, not `findUnique(id)`.
-- **Slots:** days split into AM/PM. `FULL` conflicts with `AM`+`PM`; enforced in `lib/bookings.ts` + a DB unique on `(guideId, date, slot)`.
+- **Slots:** days split into AM/PM. `FULL` conflicts with `AM`+`PM`; enforced in `lib/bookings.ts` inside a serializable transaction (no DB unique, so a cancelled booking frees its slot).
 - **Trip pages:** created with the booking; unguessable `slug`; `sections` is ordered JSON seeded from the TripType template (meet / bring / not-bring / FAQ / custom), guide-editable per booking.
 - **Weather/tides:** tides fetched once (astronomical, valid years out). Weather fetched daily inside the ~7-day NWS window by `/api/cron/refresh-trip-pages` (wire to Vercel Cron; `CRON_SECRET` bearer). "What to wear" is a deterministic rules engine in `lib/weather.ts`.
 - **SMS:** one Twilio number per guide (A2P 10DLC registration required — start early, takes days). Inbound webhook validates the Twilio signature, is idempotent on `MessageSid`, auto-creates unknown senders as `lead` clients.
 - **Email channel:** schema-ready (`Channel.EMAIL`); Gmail/Outlook OAuth ingestion is the next integration (`emailProvider` fields on Guide).
+
+## Front end
+
+- **Design system:** `src/app/globals.css` (tokens, components, screens). Palette is contrast-checked to WCAG AA. Fonts are self-hosted (Fraunces + Instrument Sans via `@fontsource-variable`), so builds need no font download.
+- **Layout:** sidebar at 1024px and up, bottom tab bar below. Inbox is a split view on desktop.
+- **Product name:** one constant in `src/lib/brand.ts`.
+- **Dates:** booking dates are calendar days stored at UTC midnight; "today" always comes from the guide's time zone (`src/lib/dates.ts`).
+- **API routes** share `route()` in `src/lib/api.ts`: 401 when signed out, plain-language JSON errors.
 
 ## Docs
 
@@ -46,5 +54,6 @@ npm run dev
 - [x] Guide-facing UI: dashboard, inbox + thread (send/pin), calendar (AM/PM halves), bookings (create/detail/status), clients (list/add/profile)
 - [ ] Email channel (Gmail first)
 - [x] Settings screen (business, SMS number, tide station search) + Trip type editor
+- [x] Responsive redesign, loading states, toasts, dialogs, client editing, block-day-off, branded sign-in, PWA manifest
 - [ ] SMS STOP/START opt-out handling
 - [ ] Instagram DMs (phase 2) · Payments (phase 3)
