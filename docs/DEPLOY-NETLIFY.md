@@ -25,6 +25,8 @@ function runs the daily tide and forecast refresh.
 
 ## Database
 
+No terminal? Open `prisma/setup.sql`, copy all of it into the Supabase SQL editor and press Run. Otherwise:
+
 Create or update the tables once, from any terminal, using the **direct** Supabase URL (port 5432):
 
 ```
