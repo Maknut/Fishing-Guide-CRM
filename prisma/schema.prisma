@@ -2,7 +2,9 @@
 // Multi-tenant: every tenant-owned row carries guideId. All queries MUST filter by guideId.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" for local dev; "rhel-openssl-3.0.x" is what Netlify and Vercel functions run on.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

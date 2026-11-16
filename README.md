@@ -40,6 +40,7 @@ npm run dev
 
 - `HOW-TO-RUN-LOCALLY.md` — local setup, non-dev
 - `docs/DEPLOY.md` — GitHub + Vercel + Resend, non-dev
+- `docs/DEPLOY-NETLIFY.md` — the same on Netlify
 - `docs/TWILIO-SETUP.md` — Twilio account + A2P 10DLC registration answers
 
 ## Build order / status
