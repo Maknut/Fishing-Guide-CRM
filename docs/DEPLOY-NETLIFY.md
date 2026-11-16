@@ -25,13 +25,11 @@ function runs the daily tide and forecast refresh.
 
 ## Database
 
-No terminal? Open `prisma/setup.sql`, copy all of it into the Supabase SQL editor and press Run. Otherwise:
+Each Netlify build runs `prisma db push` first, which creates or updates the tables using
+`DATABASE_URL`. Nothing to run by hand.
 
-Create or update the tables once, from any terminal, using the **direct** Supabase URL (port 5432):
-
-```
-DATABASE_URL="postgresql://postgres.xxxx:PASSWORD@...supabase.com:5432/postgres" ./scripts/migrate-prod.sh
-```
+- **Netlify DB:** turn it on for the site, then set `DATABASE_URL` to its connection string.
+- **Supabase:** set `DATABASE_URL` to the direct connection string (port 5432).
 
 ## After the first deploy
 

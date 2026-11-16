@@ -1,6 +1,9 @@
 # Netlify build settings. Netlify's Next.js runtime is picked up automatically.
 [build]
-  command = "npm run build"
+  # Bring the database in line with prisma/schema.prisma, then build. `db push` only adds
+  # what is missing and stops the build rather than delete data, so a bad schema change
+  # can never go live against a database that doesn't match it.
+  command = "npx prisma db push --skip-generate && npm run build"
   publish = ".next"
 
 [build.environment]
