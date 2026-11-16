@@ -14,14 +14,19 @@ declare module "next-auth" {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+/** True when the server has what it needs to send sign-in emails. */
+export function emailConfigured(): boolean {
+  return Boolean(process.env.EMAIL_SERVER && process.env.EMAIL_FROM);
+}
+
+// The config is a function so it is read per request, not when the file loads. A build
+// (or a preview deploy) without email settings then still succeeds; sign-in simply
+// reports that email isn't set up instead of crashing the whole site.
+export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   adapter: PrismaAdapter(prisma),
-  providers: [
-    EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
-    }),
-  ],
+  providers: emailConfigured()
+    ? [EmailProvider({ server: process.env.EMAIL_SERVER, from: process.env.EMAIL_FROM })]
+    : [],
   pages: {
     signIn: "/signin",
     verifyRequest: "/signin/check-email",
@@ -42,10 +47,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-});
+}));
 
 /** The signed-in guide, or null. Memoized for the duration of one server render. */
 export const currentGuide = cache(async () => {
+  // No database configured yet: treat everyone as signed out rather than erroring.
+  if (!process.env.DATABASE_URL) return null;
   const session = await auth();
   if (!session?.guideId) return null;
   return prisma.guide.findUnique({ where: { id: session.guideId } });
